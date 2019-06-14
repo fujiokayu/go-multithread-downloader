@@ -1,3 +1,3 @@
-module multithread-downloader
+module goDownloader
 
 go 1.12
