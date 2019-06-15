@@ -25,7 +25,11 @@ func defineApp(app *cli.App) {
 		},
 	}
 	app.Action = func(c *cli.Context) error {
-		downloader.Download("WIP")
+		if c.String("url") == "" {
+			cli.ShowAppHelp(c)
+			os.Exit(1)
+		}
+		downloader.Download(c.String("url"))
 		return nil
 	}
 
