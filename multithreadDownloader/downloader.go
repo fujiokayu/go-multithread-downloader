@@ -1,7 +1,7 @@
 package multithreadDownloader
 
 import (
-	"context"
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,9 +19,9 @@ type DownlodeClient struct {
 	IsReady         bool
 }
 
-func (DownlodeClient *DownlodeClient) SetResponceHeader() error {
-	fmt.Println("setResponceHeader of ", DownlodeClient.URL)
-	res, err := http.Head(DownlodeClient.URL)
+func (downlodeClient *DownlodeClient) SetResponceHeader() error {
+	fmt.Println("setResponceHeader of ", downlodeClient.URL)
+	res, err := http.Head(downlodeClient.URL)
 	if err != nil {
 		return fmt.Errorf("failed to get Header: %s", err)
 	}
@@ -30,18 +30,39 @@ func (DownlodeClient *DownlodeClient) SetResponceHeader() error {
 	}
 	defer res.Body.Close()
 
-	DownlodeClient.ContentLength, err = strconv.ParseInt(res.Header.Get("Content-Length"), 0, 64)
+	downlodeClient.ContentLength, err = strconv.ParseInt(res.Header.Get("Content-Length"), 0, 64)
 	if err != nil {
 		return fmt.Errorf("failed to get content-length: %s", err)
 	}
 
-	DownlodeClient.HasAcceptRanges = (res.Header.Get("Accept-Ranges") == "bytes")
-	DownlodeClient.IsReady = DownlodeClient.HasAcceptRanges
+	downlodeClient.HasAcceptRanges = (res.Header.Get("Accept-Ranges") == "bytes")
+	downlodeClient.IsReady = downlodeClient.HasAcceptRanges
 
 	return nil
 }
 
-//Download startPos int64, rangeByte int64
+func (downlodeClient DownlodeClient) rangeDownload(payloadSize int64, startPos int64, endPos int64) (bytes.Buffer, error) {
+	req, err := http.NewRequest("GET", downlodeClient.URL, nil)
+	if err != nil {
+		//				return err
+	}
+	req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", startPos, endPos))
+
+	var client http.Client
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Do i: ", err)
+	}
+	defer res.Body.Close()
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, res.Body)
+	if err != nil {
+		fmt.Println("Copy i: ", err)
+	}
+	return buf, err
+}
+
+//Download
 func (downlodeClient DownlodeClient) Download(threadNumber int) error {
 
 	if threadNumber == 0 {
@@ -52,12 +73,15 @@ func (downlodeClient DownlodeClient) Download(threadNumber int) error {
 		return fmt.Errorf("DownlodeClient is not ready")
 	}
 
-	fmt.Sprintf("download %d parallels", threadNumber)
+	fmt.Printf("download %d parallels", threadNumber)
 
 	payloadSize := downlodeClient.ContentLength / int64(threadNumber)
+	//ch := make(chan bytes.Buffer, threadNumber)
+	//wg := sync.WaitGroup{}
 	remaindSize := downlodeClient.ContentLength
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	//ctx, cancel := context.WithCancel(context.Background())
+	//req = req.WithContext(ctx)
+	//defer cancel()
 
 	// Create the file
 	out, err := os.Create(path.Base(downlodeClient.URL))
@@ -76,28 +100,10 @@ func (downlodeClient DownlodeClient) Download(threadNumber int) error {
 		}
 		remaindSize -= payloadSize
 
-		req, err := http.NewRequest("GET", downlodeClient.URL, nil)
-		if err != nil {
-			//				return err
-		}
-		req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", startPos, endPos))
-		req = req.WithContext(ctx)
-		fmt.Println(i, ": done")
-
-		var client http.Client
-		res, err := client.Do(req)
-		if err != nil {
-			fmt.Println("Do i: ", err)
-		}
-		defer res.Body.Close()
-		//var buf bytes.Buffer
-		_, err = io.Copy(out, res.Body)
-		if err != nil {
-			fmt.Println("Copy i: ", err)
-		}
+		buf, err := downlodeClient.rangeDownload(payloadSize, startPos, endPos)
 
 		// Write the body to file
-		_, err = io.Copy(out, res.Body)
+		_, err = io.Copy(out, &buf)
 		if err != nil {
 			fmt.Println(err)
 			return err
