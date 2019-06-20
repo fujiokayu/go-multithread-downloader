@@ -1,7 +1,7 @@
 package main
 
 import (
-	"goDownloader/downloader"
+	"goDownloader/multithreadDownloader"
 	"log"
 	"os"
 
@@ -29,7 +29,13 @@ func defineApp(app *cli.App) {
 			cli.ShowAppHelp(c)
 			os.Exit(1)
 		}
-		downloader.Download(c.String("url"))
+		dc := &multithreadDownloader.DownlodeClient{c.String("url"), 0, false, 0, false}
+		err := dc.SetResponceHeader()
+		if err != nil {
+			log.Println(err)
+		}
+
+		dc.Download(c.Int("parallel"))
 		return nil
 	}
 
