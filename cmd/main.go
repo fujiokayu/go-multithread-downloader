@@ -1,7 +1,7 @@
 package main
 
 import (
-	"goDownloader/multithreadDownloader"
+	"goDownloader/pkg/multithreadDownloader"
 	"log"
 	"os"
 
@@ -38,7 +38,6 @@ func defineApp(app *cli.App) {
 		dc.Download(c.Int("parallel"))
 		return nil
 	}
-
 }
 
 func main() {
