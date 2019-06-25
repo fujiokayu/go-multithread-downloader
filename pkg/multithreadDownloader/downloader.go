@@ -44,12 +44,11 @@ func (downlodeClient *DownlodeClient) SetResponceHeader() error {
 	return nil
 }
 
-func (downlodeClient DownlodeClient) rangeDownload(ctx context.Context, startPos int64, endPos int64) (chan bytes.Buffer, error) {
-	chReceive := make(chan bytes.Buffer, 1)
-
+func (downlodeClient DownlodeClient) rangeDownload(ctx context.Context, startPos int64, endPos int64) (bytes.Buffer, error) {
+	var buf bytes.Buffer
 	req, err := http.NewRequest("GET", downlodeClient.URL, nil)
 	if err != nil {
-		return chReceive, err
+		return buf, err
 	}
 	req = req.WithContext(ctx)
 
@@ -60,13 +59,11 @@ func (downlodeClient DownlodeClient) rangeDownload(ctx context.Context, startPos
 		log.Println("http.Client.Do : ", err)
 	}
 	defer res.Body.Close()
-	var buf bytes.Buffer
 	_, err = io.Copy(&buf, res.Body)
 	if err != nil {
 		log.Println("rangeDownload error: ", err)
 	}
-	chReceive <- buf
-	return chReceive, nil
+	return buf, nil
 }
 
 func writeDownloadData(m map[int][]byte, fileName string) error {
@@ -98,7 +95,6 @@ func (downlodeClient DownlodeClient) Download(threadNumber int) error {
 	}
 
 	payloadSize := downlodeClient.ContentLength / int64(threadNumber)
-	ch := make([]<-chan bytes.Buffer, threadNumber+1)
 	m := map[int][]byte{}
 	remaindSize := downlodeClient.ContentLength
 
@@ -116,9 +112,7 @@ func (downlodeClient DownlodeClient) Download(threadNumber int) error {
 		remaindSize -= payloadSize
 
 		eg.Go(func() error {
-			var err error
-			ch[i], err = downlodeClient.rangeDownload(ctx, startPos, endPos)
-			buf := <-ch[i]
+			buf, err := downlodeClient.rangeDownload(ctx, startPos, endPos)
 			m[i] = buf.Bytes()
 			return err
 		})
