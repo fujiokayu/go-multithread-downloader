@@ -99,9 +99,7 @@ func (downlodeClient DownlodeClient) Download(threadNumber int) error {
 
 	payloadSize := downlodeClient.ContentLength / int64(threadNumber)
 	ch := make([]<-chan bytes.Buffer, threadNumber+1)
-	var m map[int][]byte
-	//http://otiai10.hatenablog.com/entry/2014/08/09/154256
-	m = map[int][]byte{}
+	m := map[int][]byte{}
 	remaindSize := downlodeClient.ContentLength
 
 	eg, ctx := errgroup.WithContext(context.Background())
