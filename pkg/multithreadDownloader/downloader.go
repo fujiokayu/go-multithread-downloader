@@ -117,7 +117,7 @@ func (downlodeClient DownlodeClient) Download(threadNumber int) error {
 			return err
 		})
 	}
-	fmt.Println("rangeDownload done")
+	fmt.Println("Download done")
 	if err := eg.Wait(); err != nil {
 		return err
 	}
