@@ -15,6 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// DownlodeClient is the controller of this package
 type DownlodeClient struct {
 	URL             string
 	ContentLength   int64
@@ -23,6 +24,7 @@ type DownlodeClient struct {
 	IsReady         bool
 }
 
+// SetResponceHeader is set response header to DownlodeClient
 func (downlodeClient *DownlodeClient) SetResponceHeader() error {
 	res, err := http.Head(downlodeClient.URL)
 	if err != nil {
@@ -83,7 +85,7 @@ func writeDownloadData(m map[int][]byte, fileName string) error {
 	return err
 }
 
-//Download
+//Download is download all data by using rangeDownload
 func (downlodeClient DownlodeClient) Download(threadNumber int) error {
 
 	if threadNumber == 0 {
